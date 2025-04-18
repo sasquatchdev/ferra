@@ -8,6 +8,18 @@ pub enum Error {
 
     #[error("Gl loading failed. {0}")]
     GlLoad(&'static str),
+
+    #[error("Gl shader compilation failed. {0}")]
+    GlShaderCompilation(String),
+
+    #[error("Gl shader creation failed. {0}")]
+    GlShaderCreation(String),
+
+    #[error("Gl shader program creation failed. {0}")]
+    GlShaderProgramCreation(String),
+
+    #[error("Gl shader linking failed. {0}")]
+    GlShaderProgramLinking(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

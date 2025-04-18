@@ -108,6 +108,101 @@ impl Program {
 
         Ok(())
     }
+
+    pub fn uniform_location(
+        &self,
+        gl: &gl33::GlFns,
+        name: &str
+    ) -> Result<i32> {
+        let name = CString::new(name).unwrap();
+        let location = unsafe {
+            gl.GetUniformLocation(self.id, name.as_ptr().cast())
+        };
+
+        if location == -1 {
+            log::error!("Failed to get uniform location for \"{}\"", name.to_string_lossy());
+            return Err(Error::GlUniformLocation(
+                format!("\"{}\"", name.to_string_lossy())
+            ));
+        }
+
+        Ok(location)
+    }
+
+    pub fn uniform_3f(
+        &self,
+        gl: &gl33::GlFns,
+        name: &str,
+        data: &[f32; 3],
+    ) -> Result<()> {
+        let location = self.uniform_location(gl, name)?;
+
+        unsafe {
+            gl.Uniform3f(location, data[0], data[1], data[2]);
+        }
+
+        Ok(())
+    }
+
+    pub fn uniform_1f(
+        &self,
+        gl: &gl33::GlFns,
+        name: &str,
+        data: f32,
+    ) -> Result<()> {
+        let location = self.uniform_location(gl, name)?;
+
+        unsafe {
+            gl.Uniform1f(location, data);
+        }
+
+        Ok(())
+    }
+
+    pub fn uniform_1i(
+        &self,
+        gl: &gl33::GlFns,
+        name: &str,
+        data: i32,
+    ) -> Result<()> {
+        let location = self.uniform_location(gl, name)?;
+
+        unsafe {
+            gl.Uniform1i(location, data);
+        }
+
+        Ok(())
+    }
+
+    pub fn uniform_1ui(
+        &self,
+        gl: &gl33::GlFns,
+        name: &str,
+        data: u32,
+    ) -> Result<()> {
+        let location = self.uniform_location(gl, name)?;
+
+        unsafe {
+            gl.Uniform1ui(location, data);
+        }
+
+        Ok(())
+    }
+
+    pub fn uniform_1b(
+        &self,
+        gl: &gl33::GlFns,
+        name: &str,
+        data: bool,
+    ) -> Result<()> {
+        let location = self.uniform_location(gl, name)?;
+
+        unsafe {
+            gl.Uniform1i(location, data as i32);
+        }
+
+        Ok(())
+    }
 }
 
 impl<T> Shader<T> {

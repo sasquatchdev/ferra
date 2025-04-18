@@ -20,6 +20,9 @@ pub enum Error {
 
     #[error("Gl shader linking failed. {0}")]
     GlShaderProgramLinking(String),
+
+    #[error("Gl uniform location not found. {0}")]
+    GlUniformLocation(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

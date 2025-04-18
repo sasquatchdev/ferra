@@ -11,21 +11,19 @@ use glfw::{Context, WindowMode};
 /// opengl and glfw.
 pub mod display;
 
-const VERTEX_COUNT: usize = 4;
+const VERTEX_COUNT: usize = 3;
 const VERTICES: [Vertex; VERTEX_COUNT] = [
-    Vertex { position: [0.5, 0.5, 0.0] },
-    Vertex { position: [0.5, -0.5, 0.0] },
-    Vertex { position: [-0.5, -0.5, 0.0] },
-    Vertex { position: [-0.5, 0.5, 0.0] }
+    Vertex { position: [ 0.5, -0.5, 0.0 ], color: [ 1.0, 0.0, 0.0 ] },
+    Vertex { position: [ -0.5, -0.5, 0.0 ], color: [ 0.0, 1.0, 0.0 ] },
+    Vertex { position: [ -0.5, 0.5, 0.0 ], color: [ 0.0, 0.0, 1.0 ] },
 ];
 
-const INDICES: [u32; 6] = [
-    0, 1, 3,
-    1, 2, 3
+const INDICES: [u32; 3] = [
+    0, 1, 2
 ];
 
-const VERT_SRC: &str = include_str!("../res/vertex.glsl");
-const FRAG_SRC: &str = include_str!("../res/fragment.glsl");
+const VERT_SRC: &str = include_str!("../res/shaders/vertex.glsl");
+const FRAG_SRC: &str = include_str!("../res/shaders/fragment.glsl");
 
 fn main() -> Result<()>
 {
@@ -67,8 +65,20 @@ fn main() -> Result<()>
     gl.UseProgram(program.id);
 
     unsafe {
-        gl.VertexAttribPointer(0, 3, gl33::GL_FLOAT, 0, (3 * size_of::<f32>()) as i32, std::ptr::null());
+        gl.VertexAttribPointer(0, 3, gl33::GL_FLOAT, 0, (6 * size_of::<f32>()) as i32, std::ptr::null());
         gl.EnableVertexAttribArray(0);
+
+        gl.VertexAttribPointer(1, 3, gl33::GL_FLOAT, 0, (6 * size_of::<f32>()) as i32, (3 * size_of::<f32>()) as *const _);
+        gl.EnableVertexAttribArray(1);
+    }
+
+    unsafe {
+        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_WRAP_S, gl33::GL_CLAMP_TO_BORDER.0 as i32);
+        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_WRAP_T, gl33::GL_CLAMP_TO_BORDER.0 as i32);
+        gl.TexParameterfv(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_BORDER_COLOR, [1.0, 1.0, 0.0, 1.0].as_ptr());
+
+        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_MIN_FILTER, gl33::GL_LINEAR_MIPMAP_LINEAR.0 as i32);
+        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_MAG_FILTER, gl33::GL_LINEAR.0 as i32);
     }
 
     while !window.should_close() {
@@ -78,13 +88,6 @@ fn main() -> Result<()>
             gl.ClearColor(0.2, 0.3, 0.3, 1.0);
             gl.Clear(gl33::GL_COLOR_BUFFER_BIT);
 
-            let timeValue = glfw.get_time();
-            let greenValue = (timeValue.sin() / 2.0) + 0.5;
-            let greenValue = greenValue as f32;
-            let vertexColorLocation = gl.GetUniformLocation(program.id, "ourColor".as_ptr());
-
-            gl.Uniform3f(vertexColorLocation, 0.0, greenValue, 0.0);
-            
             vao.bind(&gl);
             gl.DrawElements(gl33::GL_TRIANGLES, 6, gl33::GL_UNSIGNED_INT, std::ptr::null());
             VertexArray::unbind(&gl);

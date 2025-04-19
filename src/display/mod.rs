@@ -8,3 +8,7 @@ pub mod shader;
 /// module for abstracting away individual
 /// vertices and thir representation in opengl
 pub mod vertex;
+
+/// module for abstracting away textures
+/// and their representation in opengl
+pub mod texture;

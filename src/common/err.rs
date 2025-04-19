@@ -24,8 +24,14 @@ pub enum Error {
     #[error("Gl uniform location not found. {0}")]
     GlUniformLocation(String),
 
+    #[error("Gl texture activation failed. {0}")]
+    GlTextureActivation(String),
+
     #[error("Image error. {0}")]
     Image(#[from] image::ImageError),
+
+    #[error("Image format error. {0}")]
+    ImageFormat(String)
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

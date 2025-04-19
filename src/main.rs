@@ -4,7 +4,7 @@ pub mod common;
 pub use common::err::*;
 
 use common::{log::initialize_logs, raw::AsRaw};
-use display::{shader::Program, vertex::{Buffer, Vertex, VertexArray}, win::{initialize_glfw, initialize_opengl, initialize_window, GlfwCreateWindowProps}};
+use display::{shader::Program, texture::Texture, vertex::{Buffer, Vertex, VertexArray}, win::{initialize_glfw, initialize_opengl, initialize_window, GlfwCreateWindowProps}};
 use glfw::{Context, WindowMode};
 
 /// module for rendering and windowing using 
@@ -81,36 +81,11 @@ fn main() -> Result<()>
 
     gl.UseProgram(program.id);
 
-    let image1 = image::open("res/textures/container.jpg").unwrap();
-    let image1 = image1.flipv();
-    let image1 = image1.to_rgb8();
-    let (width1, height1) = image1.dimensions();
-    let data1 = image1.into_raw();
+    let texture1 = Texture::load_file(&gl, "res/textures/container.jpg")?;
+    let texture2 = Texture::load_file(&gl, "res/textures/awesomeface.png")?;
 
-    let mut texture1 = 0;
-    unsafe {
-        gl.GenTextures(1, &mut texture1);
-        gl.BindTexture(gl33::GL_TEXTURE_2D, texture1);
-        gl.TexImage2D(gl33::GL_TEXTURE_2D, 0, gl33::GL_RGB.0 as i32, width1 as i32, height1 as i32, 0, gl33::GL_RGB, gl33::GL_UNSIGNED_BYTE, data1.as_ptr() as *const _);
-        gl.GenerateMipmap(gl33::GL_TEXTURE_2D);
-    }
-
-    let image2 = image::open("res/textures/awesomeface.png").unwrap();
-    let image2 = image2.flipv();
-    let image2 = image2.to_rgba8();
-    let (width2, height2) = image2.dimensions();
-    let data2 = image2.into_raw();
-
-    let mut texture2 = 0;
-    unsafe {
-        gl.GenTextures(1, &mut texture2);
-        gl.BindTexture(gl33::GL_TEXTURE_2D, texture2);
-        gl.TexImage2D(gl33::GL_TEXTURE_2D, 0, gl33::GL_RGB.0 as i32, width2 as i32, height2 as i32, 0, gl33::GL_RGBA, gl33::GL_UNSIGNED_BYTE, data2.as_ptr() as *const _);
-        gl.GenerateMipmap(gl33::GL_TEXTURE_2D);
-    }
-
-    program.uniform_1i(&gl, "texture1", 0)?;
-    program.uniform_1i(&gl, "texture2", 1)?;
+    texture1.uniform(&gl, &program, "texture1")?;
+    texture2.uniform(&gl, &program, "texture2")?;
 
     while !window.should_close() {
         unsafe {
@@ -119,11 +94,11 @@ fn main() -> Result<()>
             gl.ClearColor(0.2, 0.3, 0.3, 1.0);
             gl.Clear(gl33::GL_COLOR_BUFFER_BIT);
 
-            gl.ActiveTexture(gl33::GL_TEXTURE0);
-            gl.BindTexture(gl33::GL_TEXTURE_2D, texture1);
+            texture1.activate(&gl)?;
+            texture1.bind(&gl);
 
-            gl.ActiveTexture(gl33::GL_TEXTURE1);
-            gl.BindTexture(gl33::GL_TEXTURE_2D, texture2);
+            texture2.activate(&gl)?;
+            texture2.bind(&gl);
 
             vao.bind(&gl);
             gl.DrawElements(gl33::GL_TRIANGLES, 6, gl33::GL_UNSIGNED_INT, std::ptr::null());

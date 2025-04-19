@@ -23,6 +23,9 @@ pub enum Error {
 
     #[error("Gl uniform location not found. {0}")]
     GlUniformLocation(String),
+
+    #[error("Image error. {0}")]
+    Image(#[from] image::ImageError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

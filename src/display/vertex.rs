@@ -2,14 +2,31 @@ use std::marker::PhantomData;
 
 use gl33::{GLenum, GlFns};
 
+use crate::common::raw::AsRaw;
+
 pub struct Vertex {
     pub position: [f32; 3],
     pub color: [f32; 3],
+    pub texture: [f32; 2],
 }
 
 impl Vertex {
-    pub fn new(position: [f32; 3], color: [f32; 3]) -> Self {
-        Vertex { position, color }
+    pub fn new(position: [f32; 3], color: [f32; 3], texture: [f32; 2]) -> Self {
+        Vertex { position, color, texture }
+    }
+
+    pub fn size() -> usize {
+        std::mem::size_of::<Vertex>()
+    }
+}
+
+impl AsRaw<f32> for Vertex {
+    fn as_raw(self) -> Vec<f32> {
+        let mut out = Vec::with_capacity(Vertex::size() / std::mem::size_of::<f32>());
+        out.extend_from_slice(&self.position);
+        out.extend_from_slice(&self.color);
+        out.extend_from_slice(&self.texture);
+        out
     }
 }
 

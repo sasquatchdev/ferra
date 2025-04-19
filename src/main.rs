@@ -3,7 +3,7 @@ pub mod common;
 
 pub use common::err::*;
 
-use common::log::initialize_logs;
+use common::{log::initialize_logs, raw::AsRaw};
 use display::{shader::Program, vertex::{Buffer, Vertex, VertexArray}, win::{initialize_glfw, initialize_opengl, initialize_window, GlfwCreateWindowProps}};
 use glfw::{Context, WindowMode};
 
@@ -11,15 +11,17 @@ use glfw::{Context, WindowMode};
 /// opengl and glfw.
 pub mod display;
 
-const VERTEX_COUNT: usize = 3;
+const VERTEX_COUNT: usize = 4;
 const VERTICES: [Vertex; VERTEX_COUNT] = [
-    Vertex { position: [ 0.5, -0.5, 0.0 ], color: [ 1.0, 0.0, 0.0 ] },
-    Vertex { position: [ -0.5, -0.5, 0.0 ], color: [ 0.0, 1.0, 0.0 ] },
-    Vertex { position: [ -0.5, 0.5, 0.0 ], color: [ 0.0, 0.0, 1.0 ] },
+    Vertex { position: [ 0.5, 0.5, 0.0 ], color: [ 1.0, 0.0, 0.0 ], texture: [1.0, 1.0] },
+    Vertex { position: [ 0.5, -0.5, 0.0 ], color: [ 0.0, 1.0, 0.0 ], texture: [1.0, 0.0] },
+    Vertex { position: [ -0.5, -0.5, 0.0 ], color: [ 0.0, 0.0, 1.0 ], texture: [0.0, 0.0] },
+    Vertex { position: [ -0.5, 0.5, 0.0 ], color: [ 1.0, 1.0, 0.0 ], texture: [0.0, 1.0] },
 ];
 
-const INDICES: [u32; 3] = [
-    0, 1, 2
+const INDICES: [u32; 6] = [
+    0, 1, 3,
+    1, 2, 3,
 ];
 
 const VERT_SRC: &str = include_str!("../res/shaders/vertex.glsl");
@@ -47,13 +49,14 @@ fn main() -> Result<()>
     let gl = initialize_opengl(&mut window)?;
 
     let mut vao = VertexArray::new(&gl);
+    let mut vbo = Buffer::new_vertex(&gl);
+    let mut ebo = Buffer::new_element(&gl);
+
     vao.bind(&gl);
 
-    let mut vbo = Buffer::new_vertex(&gl);
     vbo.bind(&gl);
-    vbo.data(&gl, &VERTICES[..]);
+    vbo.data(&gl, &VERTICES.as_raw());
 
-    let mut ebo = Buffer::new_element(&gl);
     ebo.bind(&gl);
     ebo.data(&gl, &INDICES[..]);
 
@@ -62,24 +65,52 @@ fn main() -> Result<()>
     
     log::info!("Loaded GLSL shader program.");
 
-    gl.UseProgram(program.id);
-
     unsafe {
-        gl.VertexAttribPointer(0, 3, gl33::GL_FLOAT, 0, (6 * size_of::<f32>()) as i32, std::ptr::null());
+        // Position attribute (3 floats starting at offset 0)
+        gl.VertexAttribPointer(0, 3, gl33::GL_FLOAT, 0, (8 * size_of::<f32>()) as i32, std::ptr::null());
         gl.EnableVertexAttribArray(0);
 
-        gl.VertexAttribPointer(1, 3, gl33::GL_FLOAT, 0, (6 * size_of::<f32>()) as i32, (3 * size_of::<f32>()) as *const _);
+        // Color attribute (3 floats starting at offset 3 * size_of::<f32>())
+        gl.VertexAttribPointer(1, 3, gl33::GL_FLOAT, 0, (8 * size_of::<f32>()) as i32, (3 * size_of::<f32>()) as *const _);
         gl.EnableVertexAttribArray(1);
+
+        // Texture coordinate attribute (2 floats starting at offset 6 * size_of::<f32>())
+        gl.VertexAttribPointer(2, 2, gl33::GL_FLOAT, 0, (8 * size_of::<f32>()) as i32, (6 * size_of::<f32>()) as *const _);
+        gl.EnableVertexAttribArray(2);
     }
 
+    gl.UseProgram(program.id);
+
+    let image1 = image::open("res/textures/container.jpg").unwrap();
+    let image1 = image1.flipv();
+    let image1 = image1.to_rgb8();
+    let (width1, height1) = image1.dimensions();
+    let data1 = image1.into_raw();
+
+    let mut texture1 = 0;
     unsafe {
-        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_WRAP_S, gl33::GL_CLAMP_TO_BORDER.0 as i32);
-        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_WRAP_T, gl33::GL_CLAMP_TO_BORDER.0 as i32);
-        gl.TexParameterfv(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_BORDER_COLOR, [1.0, 1.0, 0.0, 1.0].as_ptr());
-
-        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_MIN_FILTER, gl33::GL_LINEAR_MIPMAP_LINEAR.0 as i32);
-        gl.TexParameteri(gl33::GL_TEXTURE_2D, gl33::GL_TEXTURE_MAG_FILTER, gl33::GL_LINEAR.0 as i32);
+        gl.GenTextures(1, &mut texture1);
+        gl.BindTexture(gl33::GL_TEXTURE_2D, texture1);
+        gl.TexImage2D(gl33::GL_TEXTURE_2D, 0, gl33::GL_RGB.0 as i32, width1 as i32, height1 as i32, 0, gl33::GL_RGB, gl33::GL_UNSIGNED_BYTE, data1.as_ptr() as *const _);
+        gl.GenerateMipmap(gl33::GL_TEXTURE_2D);
     }
+
+    let image2 = image::open("res/textures/awesomeface.png").unwrap();
+    let image2 = image2.flipv();
+    let image2 = image2.to_rgba8();
+    let (width2, height2) = image2.dimensions();
+    let data2 = image2.into_raw();
+
+    let mut texture2 = 0;
+    unsafe {
+        gl.GenTextures(1, &mut texture2);
+        gl.BindTexture(gl33::GL_TEXTURE_2D, texture2);
+        gl.TexImage2D(gl33::GL_TEXTURE_2D, 0, gl33::GL_RGB.0 as i32, width2 as i32, height2 as i32, 0, gl33::GL_RGBA, gl33::GL_UNSIGNED_BYTE, data2.as_ptr() as *const _);
+        gl.GenerateMipmap(gl33::GL_TEXTURE_2D);
+    }
+
+    program.uniform_1i(&gl, "texture1", 0)?;
+    program.uniform_1i(&gl, "texture2", 1)?;
 
     while !window.should_close() {
         unsafe {
@@ -87,6 +118,12 @@ fn main() -> Result<()>
 
             gl.ClearColor(0.2, 0.3, 0.3, 1.0);
             gl.Clear(gl33::GL_COLOR_BUFFER_BIT);
+
+            gl.ActiveTexture(gl33::GL_TEXTURE0);
+            gl.BindTexture(gl33::GL_TEXTURE_2D, texture1);
+
+            gl.ActiveTexture(gl33::GL_TEXTURE1);
+            gl.BindTexture(gl33::GL_TEXTURE_2D, texture2);
 
             vao.bind(&gl);
             gl.DrawElements(gl33::GL_TRIANGLES, 6, gl33::GL_UNSIGNED_INT, std::ptr::null());
